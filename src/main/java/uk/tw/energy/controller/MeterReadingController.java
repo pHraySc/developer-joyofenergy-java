@@ -19,33 +19,51 @@ import java.util.Optional;
 @RequestMapping("/readings")
 public class MeterReadingController {
 
-    private final MeterReadingService meterReadingService;
+	private final MeterReadingService meterReadingService;
 
-    public MeterReadingController(MeterReadingService meterReadingService) {
-        this.meterReadingService = meterReadingService;
-    }
+	public MeterReadingController(MeterReadingService meterReadingService) {
+		this.meterReadingService = meterReadingService;
+	}
 
-    @PostMapping("/store")
-    public ResponseEntity storeReadings(@RequestBody MeterReadings meterReadings) {
-        if (!isMeterReadingsValid(meterReadings)) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
-        }
-        meterReadingService.storeReadings(meterReadings.getSmartMeterId(), meterReadings.getElectricityReadings());
-        return ResponseEntity.ok().build();
-    }
+	/**
+	 * 存储电表读数
+	 *
+	 * @param meterReadings
+	 * @return
+	 */
+	@PostMapping("/store")
+	public ResponseEntity storeReadings(@RequestBody MeterReadings meterReadings) {
+		if (!isMeterReadingsValid(meterReadings)) {
+			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+		}
+		meterReadingService.storeReadings(meterReadings.getSmartMeterId(), meterReadings.getElectricityReadings());
+		return ResponseEntity.ok().build();
+	}
 
-    private boolean isMeterReadingsValid(MeterReadings meterReadings) {
-        String smartMeterId = meterReadings.getSmartMeterId();
-        List<ElectricityReading> electricityReadings = meterReadings.getElectricityReadings();
-        return smartMeterId != null && !smartMeterId.isEmpty()
-                && electricityReadings != null && !electricityReadings.isEmpty();
-    }
+	/**
+	 * 校验入参(Case覆盖)
+	 *
+	 * @param meterReadings
+	 * @return
+	 */
+	private boolean isMeterReadingsValid(MeterReadings meterReadings) {
+		String smartMeterId = meterReadings.getSmartMeterId();
+		List<ElectricityReading> electricityReadings = meterReadings.getElectricityReadings();
+		return smartMeterId != null && !smartMeterId.isEmpty()
+				&& electricityReadings != null && !electricityReadings.isEmpty();
+	}
 
-    @GetMapping("/read/{smartMeterId}")
-    public ResponseEntity readReadings(@PathVariable String smartMeterId) {
-        Optional<List<ElectricityReading>> readings = meterReadingService.getReadings(smartMeterId);
-        return readings.isPresent()
-                ? ResponseEntity.ok(readings.get())
-                : ResponseEntity.notFound().build();
-    }
+	/**
+	 * 获取指定智能电表的实时读数
+	 *
+	 * @param smartMeterId
+	 * @return
+	 */
+	@GetMapping("/read/{smartMeterId}")
+	public ResponseEntity readReadings(@PathVariable String smartMeterId) {
+		Optional<List<ElectricityReading>> readings = meterReadingService.getReadings(smartMeterId);
+		return readings.isPresent()
+				? ResponseEntity.ok(readings.get())
+				: ResponseEntity.notFound().build();
+	}
 }

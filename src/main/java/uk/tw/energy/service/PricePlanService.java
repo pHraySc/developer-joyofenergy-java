@@ -16,50 +16,78 @@ import java.util.stream.Collectors;
 @Service
 public class PricePlanService {
 
-    private final List<PricePlan> pricePlans;
-    private final MeterReadingService meterReadingService;
+	private final List<PricePlan> pricePlans;
+	private final MeterReadingService meterReadingService;
 
-    public PricePlanService(List<PricePlan> pricePlans, MeterReadingService meterReadingService) {
-        this.pricePlans = pricePlans;
-        this.meterReadingService = meterReadingService;
-    }
+	public PricePlanService(List<PricePlan> pricePlans, MeterReadingService meterReadingService) {
+		this.pricePlans = pricePlans;
+		this.meterReadingService = meterReadingService;
+	}
 
-    public Optional<Map<String, BigDecimal>> getConsumptionCostOfElectricityReadingsForEachPricePlan(String smartMeterId) {
-        Optional<List<ElectricityReading>> electricityReadings = meterReadingService.getReadings(smartMeterId);
+	/**
+	 * 获取指定智能电表的价格计划，与计算关联此电表读数对于每个价格计划的均价
+	 *
+	 * @param smartMeterId
+	 * @return
+	 */
+	public Optional<Map<String, BigDecimal>> getConsumptionCostOfElectricityReadingsForEachPricePlan(String smartMeterId) {
+		Optional<List<ElectricityReading>> electricityReadings = meterReadingService.getReadings(smartMeterId);
 
-        if (!electricityReadings.isPresent()) {
-            return Optional.empty();
-        }
+		if (!electricityReadings.isPresent()) {
+			return Optional.empty();
+		}
 
-        return Optional.of(pricePlans.stream().collect(
-                Collectors.toMap(PricePlan::getPlanName, t -> calculateCost(electricityReadings.get(), t))));
-    }
+		// 返回价格计划名称与它关联此电表实时读数的成本均价 - 键值对
+		return Optional.of(pricePlans.stream().collect(
+				Collectors.toMap(PricePlan::getPlanName, t -> calculateCost(electricityReadings.get(), t))));
+	}
 
-    private BigDecimal calculateCost(List<ElectricityReading> electricityReadings, PricePlan pricePlan) {
-        BigDecimal average = calculateAverageReading(electricityReadings);
-        BigDecimal timeElapsed = calculateTimeElapsed(electricityReadings);
+	/**
+	 * 计算指定(每个)价格计划(单价不同)对于指定电表读数的成本价格
+	 *
+	 * @param electricityReadings
+	 * @param pricePlan
+	 * @return
+	 */
+	private BigDecimal calculateCost(List<ElectricityReading> electricityReadings, PricePlan pricePlan) {
+		// TODO
+		BigDecimal average = calculateAverageReading(electricityReadings);
+		BigDecimal timeElapsed = calculateTimeElapsed(electricityReadings);
 
-        BigDecimal averagedCost = average.divide(timeElapsed, RoundingMode.HALF_UP);
-        return averagedCost.multiply(pricePlan.getUnitRate());
-    }
+		// TODO
+		BigDecimal averagedCost = average.divide(timeElapsed, RoundingMode.HALF_UP);
+		return averagedCost.multiply(pricePlan.getUnitRate());
+	}
 
-    private BigDecimal calculateAverageReading(List<ElectricityReading> electricityReadings) {
-        BigDecimal summedReadings = electricityReadings.stream()
-                .map(ElectricityReading::getReading)
-                .reduce(BigDecimal.ZERO, (reading, accumulator) -> reading.add(accumulator));
+	/**
+	 * 计划多次读数的平均值
+	 *
+	 * @param electricityReadings
+	 * @return
+	 */
+	private BigDecimal calculateAverageReading(List<ElectricityReading> electricityReadings) {
+		BigDecimal summedReadings = electricityReadings.stream()
+				.map(ElectricityReading::getReading)
+				.reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        return summedReadings.divide(BigDecimal.valueOf(electricityReadings.size()), RoundingMode.HALF_UP);
-    }
+		return summedReadings.divide(BigDecimal.valueOf(electricityReadings.size()), RoundingMode.HALF_UP);
+	}
 
-    private BigDecimal calculateTimeElapsed(List<ElectricityReading> electricityReadings) {
-        ElectricityReading first = electricityReadings.stream()
-                .min(Comparator.comparing(ElectricityReading::getTime))
-                .get();
-        ElectricityReading last = electricityReadings.stream()
-                .max(Comparator.comparing(ElectricityReading::getTime))
-                .get();
+	/**
+	 * 计算多次读数的时间长度(单位: H)
+	 *
+	 * @param electricityReadings
+	 * @return
+	 */
+	private BigDecimal calculateTimeElapsed(List<ElectricityReading> electricityReadings) {
+		ElectricityReading first = electricityReadings.stream()
+				.min(Comparator.comparing(ElectricityReading::getTime))
+				.get();
+		ElectricityReading last = electricityReadings.stream()
+				.max(Comparator.comparing(ElectricityReading::getTime))
+				.get();
 
-        return BigDecimal.valueOf(Duration.between(first.getTime(), last.getTime()).getSeconds() / 3600.0);
-    }
+		return BigDecimal.valueOf(Duration.between(first.getTime(), last.getTime()).getSeconds() / 3600.0);
+	}
 
 }

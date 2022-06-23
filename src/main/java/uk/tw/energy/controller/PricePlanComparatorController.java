@@ -21,52 +21,70 @@ import java.util.Optional;
 @RequestMapping("/price-plans")
 public class PricePlanComparatorController {
 
-    public final static String PRICE_PLAN_ID_KEY = "pricePlanId";
-    public final static String PRICE_PLAN_COMPARISONS_KEY = "pricePlanComparisons";
-    private final PricePlanService pricePlanService;
-    private final AccountService accountService;
+	public final static String PRICE_PLAN_ID_KEY = "pricePlanId";
+	public final static String PRICE_PLAN_COMPARISONS_KEY = "pricePlanComparisons";
+	private final PricePlanService pricePlanService;
+	private final AccountService accountService;
 
-    public PricePlanComparatorController(PricePlanService pricePlanService, AccountService accountService) {
-        this.pricePlanService = pricePlanService;
-        this.accountService = accountService;
-    }
+	public PricePlanComparatorController(PricePlanService pricePlanService, AccountService accountService) {
+		this.pricePlanService = pricePlanService;
+		this.accountService = accountService;
+	}
 
-    @GetMapping("/compare-all/{smartMeterId}")
-    public ResponseEntity<Map<String, Object>> calculatedCostForEachPricePlan(@PathVariable String smartMeterId) {
-        String pricePlanId = accountService.getPricePlanIdForSmartMeterId(smartMeterId);
-        Optional<Map<String, BigDecimal>> consumptionsForPricePlans =
-                pricePlanService.getConsumptionCostOfElectricityReadingsForEachPricePlan(smartMeterId);
+	/**
+	 * （当前价格计划与所有价格计划的成本比较）
+	 * 获取指定智能电表的价格计划，与计算关联此电表读数对于每个价格计划的均价
+	 *
+	 * @param smartMeterId
+	 * @return
+	 */
+	@GetMapping("/compare-all/{smartMeterId}")
+	public ResponseEntity<Map<String, Object>> calculatedCostForEachPricePlan(@PathVariable String smartMeterId) {
+		String pricePlanId = accountService.getPricePlanIdForSmartMeterId(smartMeterId);
+		Optional<Map<String, BigDecimal>> consumptionsForPricePlans =
+				pricePlanService.getConsumptionCostOfElectricityReadingsForEachPricePlan(smartMeterId);
 
-        if (!consumptionsForPricePlans.isPresent()) {
-            return ResponseEntity.notFound().build();
-        }
+		if (!consumptionsForPricePlans.isPresent()) {
+			return ResponseEntity.notFound().build();
+		}
 
-        Map<String, Object> pricePlanComparisons = new HashMap<>();
-        pricePlanComparisons.put(PRICE_PLAN_ID_KEY, pricePlanId);
-        pricePlanComparisons.put(PRICE_PLAN_COMPARISONS_KEY, consumptionsForPricePlans.get());
+		Map<String, Object> pricePlanComparisons = new HashMap<>();
+		pricePlanComparisons.put(PRICE_PLAN_ID_KEY, pricePlanId);
+		pricePlanComparisons.put(PRICE_PLAN_COMPARISONS_KEY, consumptionsForPricePlans.get());
 
-        return consumptionsForPricePlans.isPresent()
-                ? ResponseEntity.ok(pricePlanComparisons)
-                : ResponseEntity.notFound().build();
-    }
+		return consumptionsForPricePlans.isPresent()
+				? ResponseEntity.ok(pricePlanComparisons)
+				: ResponseEntity.notFound().build();
+	}
 
-    @GetMapping("/recommend/{smartMeterId}")
-    public ResponseEntity<List<Map.Entry<String, BigDecimal>>> recommendCheapestPricePlans(@PathVariable String smartMeterId,
-                                                                                           @RequestParam(value = "limit", required = false) Integer limit) {
-        Optional<Map<String, BigDecimal>> consumptionsForPricePlans =
-                pricePlanService.getConsumptionCostOfElectricityReadingsForEachPricePlan(smartMeterId);
+	/**
+	 * 获取指定智能电表对于每个价格计划的实时均价，并按均价升序排序
+	 *
+	 * @param smartMeterId
+	 * @param limit
+	 * @return
+	 */
+	@GetMapping("/recommend/{smartMeterId}")
+	public ResponseEntity<List<Map.Entry<String, BigDecimal>>> recommendCheapestPricePlans(
+			@PathVariable String smartMeterId, @RequestParam(value = "limit", required = false) Integer limit) {
+		// 1-获取指定智能电表的价格计划，与计算关联此电表读数对于每个价格计划的均价
+		Optional<Map<String, BigDecimal>> consumptionsForPricePlans =
+				pricePlanService.getConsumptionCostOfElectricityReadingsForEachPricePlan(smartMeterId);
 
-        if (!consumptionsForPricePlans.isPresent()) {
-            return ResponseEntity.notFound().build();
-        }
+		if (!consumptionsForPricePlans.isPresent()) {
+			return ResponseEntity.notFound().build();
+		}
 
-        List<Map.Entry<String, BigDecimal>> recommendations = new ArrayList<>(consumptionsForPricePlans.get().entrySet());
-        recommendations.sort(Comparator.comparing(Map.Entry::getValue));
+		// 2-按计算出的均价排序asc
+		List<Map.Entry<String, BigDecimal>> recommendations =
+				new ArrayList<>(consumptionsForPricePlans.get().entrySet());
+		recommendations.sort(Comparator.comparing(Map.Entry::getValue));
 
-        if (limit != null && limit < recommendations.size()) {
-            recommendations = recommendations.subList(0, limit);
-        }
+		// 3-有限制则截取
+		if (limit != null && limit < recommendations.size()) {
+			recommendations = recommendations.subList(0, limit);
+		}
 
-        return ResponseEntity.ok(recommendations);
-    }
+		return ResponseEntity.ok(recommendations);
+	}
 }
