@@ -3,10 +3,10 @@ package uk.tw.energy.service;
 import org.springframework.stereotype.Service;
 import uk.tw.energy.domain.ElectricityReading;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class MeterReadingService {
@@ -38,5 +38,21 @@ public class MeterReadingService {
 			meterAssociatedReadings.put(smartMeterId, new ArrayList<>());
 		}
 		meterAssociatedReadings.get(smartMeterId).addAll(electricityReadings);
+	}
+
+	public List<ElectricityReading> getReadingsForSpecifiedDuration(String smartMeterId,
+																	LocalDateTime duration) {
+		if (Objects.isNull(duration)) {
+			throw new RuntimeException("指定时间范围入参不能为空");
+		}
+
+		Optional<List<ElectricityReading>> allReadings = this.getReadings(smartMeterId);
+		return allReadings
+				.map(electricityReadings -> electricityReadings
+						.stream()
+						.filter(reading -> reading.getTime().isAfter(duration.toInstant(ZoneOffset.UTC)))
+						.collect(Collectors.toList()))
+				.orElse(Collections.emptyList());
+
 	}
 }
