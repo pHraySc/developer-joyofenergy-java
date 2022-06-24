@@ -7,47 +7,54 @@ import java.util.List;
 
 public class PricePlan {
 
-    private final String energySupplier;
-    private final String planName;
-    private final BigDecimal unitRate; // unit price per kWh
-    private final List<PeakTimeMultiplier> peakTimeMultipliers;
+	private final String energySupplier;
+	private final String planName;
+	private final BigDecimal unitRate; // unit price per kWh
+	private final List<PeakTimeMultiplier> peakTimeMultipliers;
 
-    public PricePlan(String planName, String energySupplier, BigDecimal unitRate, List<PeakTimeMultiplier> peakTimeMultipliers) {
-        this.planName = planName;
-        this.energySupplier = energySupplier;
-        this.unitRate = unitRate;
-        this.peakTimeMultipliers = peakTimeMultipliers;
-    }
+	/**
+	 * @param planName            价格计划名称
+	 * @param energySupplier      能源供应商
+	 * @param unitRate            价格比率
+	 * @param peakTimeMultipliers 峰值时间倍率
+	 */
+	public PricePlan(String planName, String energySupplier, BigDecimal unitRate,
+					 List<PeakTimeMultiplier> peakTimeMultipliers) {
+		this.planName = planName;
+		this.energySupplier = energySupplier;
+		this.unitRate = unitRate;
+		this.peakTimeMultipliers = peakTimeMultipliers;
+	}
 
-    public String getEnergySupplier() {
-        return energySupplier;
-    }
+	public String getEnergySupplier() {
+		return energySupplier;
+	}
 
-    public String getPlanName() {
-        return planName;
-    }
+	public String getPlanName() {
+		return planName;
+	}
 
-    public BigDecimal getUnitRate() {
-        return unitRate;
-    }
+	public BigDecimal getUnitRate() {
+		return unitRate;
+	}
 
-    public BigDecimal getPrice(LocalDateTime dateTime) {
-        return peakTimeMultipliers.stream()
-                .filter(multiplier -> multiplier.dayOfWeek.equals(dateTime.getDayOfWeek()))
-                .findFirst()
-                .map(multiplier -> unitRate.multiply(multiplier.multiplier))
-                .orElse(unitRate);
-    }
+	public BigDecimal getPrice(LocalDateTime dateTime) {
+		return peakTimeMultipliers.stream()
+				.filter(multiplier -> multiplier.dayOfWeek.equals(dateTime.getDayOfWeek()))
+				.findFirst()
+				.map(multiplier -> unitRate.multiply(multiplier.multiplier))
+				.orElse(unitRate);
+	}
 
 
-    static class PeakTimeMultiplier {
+	static class PeakTimeMultiplier {
 
-        DayOfWeek dayOfWeek;
-        BigDecimal multiplier;
+		DayOfWeek dayOfWeek;
+		BigDecimal multiplier;
 
-        public PeakTimeMultiplier(DayOfWeek dayOfWeek, BigDecimal multiplier) {
-            this.dayOfWeek = dayOfWeek;
-            this.multiplier = multiplier;
-        }
-    }
+		public PeakTimeMultiplier(DayOfWeek dayOfWeek, BigDecimal multiplier) {
+			this.dayOfWeek = dayOfWeek;
+			this.multiplier = multiplier;
+		}
+	}
 }
