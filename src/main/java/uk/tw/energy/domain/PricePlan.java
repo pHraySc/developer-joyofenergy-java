@@ -45,7 +45,7 @@ public class PricePlan {
 				.map(multiplier -> unitRate.multiply(multiplier.multiplier))
 				.orElse(unitRate);
 	}
-
+	
 
 	static class PeakTimeMultiplier {
 
