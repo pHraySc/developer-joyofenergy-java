@@ -52,7 +52,7 @@ public class MeterReadingService {
 						.stream()
 						.filter(reading -> reading.getTime().isAfter(duration.toInstant(ZoneOffset.UTC)))
 						.collect(Collectors.toList()))
-				.orElse(Collections.emptyList());
+				.orElseGet(Collections::emptyList);
 
 	}
 }
